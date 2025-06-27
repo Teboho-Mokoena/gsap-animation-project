@@ -1,14 +1,31 @@
 import gsap from "gsap";
 import {useGSAP} from "@gsap/react";
 import { SplitText } from "gsap/all";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+import {useMediaQuery} from "react-responsive";
+import {useRef, useEffect} from "react";
+
+gsap.registerPlugin(ScrollTrigger);
 
 const Hero = () => {
+
+    const videoRef = useRef(null)
+
+    const isMobile = useMediaQuery({ maxWidth:767 })
+
+    // Ensure video is properly initialized
+    useEffect(() => {
+        if (videoRef.current) {
+            videoRef.current.load();
+            videoRef.current.pause();
+        }
+    }, []);
 
     useGSAP(() => {
         const heroSplit = new SplitText('.title', { type: 'chars, words' })
         const paragraphSplit = new SplitText('.subtitle', { type: 'lines' })
 
-        heroSplit.chars.forEach((char, i) => char.classList.add('text-gradient'))
+        heroSplit.chars.forEach((char) => char.classList.add('text-gradient'))
 
         gsap.from(heroSplit.chars, {
             yPercent: 100,
@@ -37,9 +54,46 @@ const Hero = () => {
             .to('.right-leaf', { y: 200 }, 0)
             .to('.left-leaf', { y: -200 }, 0)
 
+        const startValue = isMobile ? 'top 50%' : 'center 60%'
+        const endValue = isMobile ? '120 top' : 'bottom top'
+
+        // Video animation on scroll
+        if (videoRef.current) {
+            // Ensure video is loaded
+            videoRef.current.load();
+            videoRef.current.pause();
+
+            // Create a timeline for the video
+            const videoTl = gsap.timeline({
+                scrollTrigger: {
+                    trigger: 'video',
+                    start: startValue,
+                    end: endValue,
+                    scrub: true,
+                    pin: true,
+                }
+            });
+
+            // Get video duration once metadata is loaded
+            videoRef.current.onloadedmetadata = () => {
+                const videoDuration = videoRef.current.duration;
+
+                // Animation to control video playback based on scroll position
+                videoTl.fromTo(videoRef.current,
+                    { currentTime: 0 },
+                    {
+                        currentTime: videoDuration,
+                        ease: "none",
+                        duration: 1
+                    }
+                );
+            };
+        }
+
     }, [])
 
     return (
+    <>
         <section id="hero" className="noisy">
             <h1 className="title">MOJITO</h1>
             <img
@@ -70,6 +124,16 @@ const Hero = () => {
                 </div>
             </div>
         </section>
+        <div className="video absolute inset-0">
+            <video
+                ref={videoRef}
+                src="/videos/output.mp4"
+                muted
+                playsInline
+                preload={"auto"}
+            />
+        </div>
+    </>
     )
 }
 export default Hero
